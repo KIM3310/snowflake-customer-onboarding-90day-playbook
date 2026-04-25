@@ -1,0 +1,31 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Markdown hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$(mktemp)"
+          find . -type f \( -name '*.md' -o -name '*.mdx' \) -not -path './.git/*' | sort > "$files"
+          test -s "$files"
+          while IFS= read -r file; do
+            test -s "$file"
+          done < "$files"
+          if xargs grep -InE '^(<<<<<<<|>>>>>>>)|^=======$' < "$files"; then
+            echo "Merge conflict marker found in Markdown files" >&2
+            exit 1
+          fi
